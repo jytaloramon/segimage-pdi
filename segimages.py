@@ -1,4 +1,3 @@
-import queue
 from typing import Any, List, Tuple
 
 import numpy as np
@@ -12,17 +11,20 @@ class SegImageGrowing:
         self._shape = self._image.shape
         self._image_avg_global = np.average(image)
 
-    def run_segmentation(self, seed_start_posi: Tuple[int, int], seed_color: int, target: int) -> Any:
+    def run_segmentation(self, seed_start_posi: Tuple[int, int], seed_start_color: int, target: int) -> Tuple[Any,  List[Tuple[int, int, int]]]:
 
         img_out = np.zeros(self._shape, dtype=np.float32)
 
         queue: List[Tuple[int, int, int, int]] = [
-            (seed_start_posi[0], seed_start_posi[1], seed_color, self._image[1][1])]
+            (seed_start_posi[0], seed_start_posi[1], seed_start_color, self._image[1][1])]
 
         neighborhood: List[Tuple[int, int]] = [(-1, -1), (-1, 0), (-1, 1), (1, -1),
                                                (1, 0), (1, 1), (0, -1), (0, 1)]
 
-        img_out[1][1] = 1
+        event_queue: List[Tuple[int, int, int]] = [
+            (seed_start_posi[0], seed_start_posi[1], seed_start_color)]
+
+        img_out[seed_start_posi[0]][seed_start_posi[1]] = seed_start_color
         while len(queue) > 0:
             l, c, i, b = queue.pop(0)
 
@@ -33,13 +35,15 @@ class SegImageGrowing:
                     if abs(b - self._image[next_l][next_c]) <= target:
                         img_out[next_l][next_c] = i
                         queue.append((next_l, next_c, i, b))
+                        event_queue.append((next_l, next_c, i))
                     else:
                         new_i = 255 if i == 1 else 1
                         img_out[next_l][next_c] = new_i
                         queue.append(
                             (next_l, next_c, new_i, self._image[next_l][next_c]))
+                        event_queue.append((next_l, next_c, i))
 
-        return img_out
+        return img_out, event_queue
 
     def _is_valid_pixel(self, l: int, c: int) -> bool:
 
